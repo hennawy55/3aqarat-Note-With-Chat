@@ -40,7 +40,7 @@ assert(nativeNotifications.includes('showInstantNotification') && nativeNotifica
 const chat = read('chat.js');
 const chatSchema = read('supabase/migrations/202611250001_internal_chat.sql');
 const chatFeatures = read('supabase/migrations/202611250002_chat_features.sql');
-assert(chat.includes("event:'chat_refresh'") && chat.includes("channel('smartnote-chat'"), 'Chat page must subscribe to realtime database broadcasts');
+assert(chat.includes("smartnote-chat-refresh") && chat.includes('realtimeChannel=true'), 'Chat page must consume authenticated session-scoped realtime broadcasts');
 assert(chat.includes('chatInboxButton') && chat.includes('chatInboxPanel') && chat.includes('chat_mark_all_read'), 'Chat icon must open a de-duplicated conversation inbox with mark-all-read');
 assert(chat.includes('data-reply') && chat.includes('chat_react') && chat.includes('@all') && chat.includes('data-mention'), 'Chat must support replies, reactions and user/all mentions');
 assert(chat.includes('chat_presence') && chat.includes('chat_mute_all') && chat.includes('chat_mute'), 'Chat must expose active users and global/per-room mute controls');
