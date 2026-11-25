@@ -36,6 +36,21 @@ assert(app.includes('data-unified-open=') && !app.includes('task-alert-actions')
 assert(migrationRealtime.includes('realtime.send') && migrationRealtime.includes('smartnote-session:') && migrationRealtime.includes("'refresh'") && migrationRealtime.includes('user_database_meta'), 'Database triggers must broadcast minimal session-scoped refresh events');
 assert(styles.includes('.task-alert.is-unread') && styles.includes('.notification-panel'), 'Notification panel must use compact unread-aware card styling');
 assert(nativeNotifications.includes('showInstantNotification') && nativeNotifications.includes('smartnote-open-assignment'), 'Android must support immediate incoming notification display');
+
+const chat = read('chat.js');
+const chatSchema = read('supabase/migrations/202611250001_internal_chat.sql');
+const chatFeatures = read('supabase/migrations/202611250002_chat_features.sql');
+assert(chat.includes("event:'chat_refresh'") && chat.includes("channel('smartnote-chat'"), 'Chat page must subscribe to realtime database broadcasts');
+assert(chat.includes('chatInboxButton') && chat.includes('chatInboxPanel') && chat.includes('chat_mark_all_read'), 'Chat icon must open a de-duplicated conversation inbox with mark-all-read');
+assert(chat.includes('data-reply') && chat.includes('chat_react') && chat.includes('@all') && chat.includes('data-mention'), 'Chat must support replies, reactions and user/all mentions');
+assert(chat.includes('chat_presence') && chat.includes('chat_mute_all') && chat.includes('chat_mute'), 'Chat must expose active users and global/per-room mute controls');
+assert(chat.includes("e.key==='Enter'&&!e.shiftKey") && chat.includes('is-mobile-conversation'), 'Chat must send on Enter and use full-screen mobile conversation navigation');
+assert(edge.includes('chat_message_receipts') && edge.includes('chat_mark_all_read') && edge.includes('chat_message_reactions') && edge.includes('chat_presence'), 'Chat API must implement delivery/read receipts, reactions and presence');
+assert(edge.includes('type:isMentioned?"chat_mention":"chat_message"') && edge.includes('extraData:Record<string,string>'), 'Chat messages must send typed push notifications');
+assert(chatFeatures.includes('broadcast_smartnote_chat_change') && chatFeatures.includes('chat_message_receipts') && chatFeatures.includes('chat_user_settings'), 'Chat feature migration must provision receipts, mute settings and realtime broadcasts');
+assert(worker.includes('smartnote-offline-shell-v34') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
+assert(nativeNotifications.includes('smartnote-open-chat') && nativeNotifications.includes('roomId'), 'Android push notification taps must open the target conversation');
+
 console.log('SmartNote Supabase migration smoke checks passed.');
 
 const englishHtml = read('index-en.html');
