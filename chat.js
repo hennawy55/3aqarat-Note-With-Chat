@@ -43,7 +43,7 @@ document.addEventListener('click',e=>{const wrap=$('chatInboxButton')?.closest('
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('chatInboxPanel')&&!$('chatInboxPanel').hidden)closeInbox()});
 async function load(){
  if(!window.smartNoteApiPost||!current())return;
- try{const [r,u]=await Promise.all([call('chat_rooms'),call('chat_users')]);rooms=r.rooms||[];users=u.users||[];globalMute=!!r.muteAll;renderRooms();renderInbox();if(activeRoom){const fresh=rooms.find(x=>x.id===activeRoom.id);if(fresh)activeRoom=fresh;else{activeRoom=null;backToRooms()};if(activeRoom&&active())await loadMessages(true)}}
+ try{const [r,u]=await Promise.all([call('chat_rooms'),call('chat_users')]);rooms=r.rooms||[];roomsLoaded=true;users=u.users||[];globalMute=!!r.muteAll;applyPresenceToRooms();renderRooms();renderInbox();if(activeRoom){const fresh=rooms.find(x=>x.id===activeRoom.id);if(fresh)activeRoom=fresh;else{activeRoom=null;backToRooms()};if(activeRoom&&active())await loadMessages(true)}}
  catch(e){if($('chatRoomList'))$('chatRoomList').innerHTML='<div class="chat-empty">'+esc(tr('تعذر تحميل المحادثات: ','Could not load chats: ')+e.message)+'</div>'}
 }
 async function refreshRooms(notify=false){try{const previous=new Map(rooms.map(r=>[r.id,r.lastMessage?.id]));const hadRooms=roomsLoaded;const r=await call('chat_rooms');rooms=r.rooms||[];globalMute=!!r.muteAll;roomsLoaded=true;if(notify&&hadRooms){for(const room of rooms){const latest=room.lastMessage;if(latest&&latest.senderId!==current()?.id&&previous.get(room.id)!==latest.id&&!(activeRoom?.id===room.id&&active()))showIncomingToast(room,latest)}}applyPresenceToRooms();renderRooms();renderInbox()}catch(e){console.warn('Chat room refresh failed',e)}}
