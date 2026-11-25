@@ -168,6 +168,67 @@ async function assignmentAction(action:string,b:any,u:any){
  if(action==="assignment_note_add"){const a=await getAssignment(id);assertAssignment(u,a);const body=String(b.body||"").trim().slice(0,5000);if(!body)throw new Error("invalid_note");const visibility=b.visibility==="shared"?"shared":"private";const note=await needData<any>(db.from("assignment_notes").insert({assignment_id:id,author_id:u.id,author_name:u.username,visibility,body}).select("*").single(),"note_create_failed");await activity(id,u,"note_added",{visibility});return {ok:true,note:{id:note.id,visibility:note.visibility,body:note.body,createdAt:note.created_at}};}
  return null;
 }
+
+async function chatAction(action:string,b:any,u:any){
+ const roomId=String(b.roomId||"");
+ if(action==="chat_users"){
+  const rows=await needData<any[]>(db.from("profiles").select("id,username,role").eq("status","active").neq("id",u.id).order("username"),"chat_users_failed");
+  return {ok:true,users:rows.map(x=>({id:x.id,username:x.username,role:x.role}))};
+ }
+ if(action==="chat_rooms"){
+  let memberships=await needData<any[]>(db.from("chat_members").select("room_id,member_role,last_read_at").eq("user_id",u.id),"chat_memberships_failed");
+  const ids=memberships.map(x=>x.room_id);
+  let rooms:any[]=[];
+  if(ids.length)rooms=await needData<any[]>(db.from("chat_rooms").select("id,room_type,name,created_by,created_at,updated_at").in("id",ids).order("updated_at",{ascending:false}),"chat_rooms_failed");
+  let pub=await needData<any>(db.from("chat_rooms").select("id,room_type,name,created_by,created_at,updated_at").eq("room_type","public").maybeSingle(),"chat_public_room_failed");
+  if(pub&&!rooms.some(x=>x.id===pub.id)){await needData(db.from("chat_members").upsert({room_id:pub.id,user_id:u.id,member_role:"member"},{onConflict:"room_id,user_id"}),"chat_join_public_failed");rooms.unshift(pub);}
+  return {ok:true,rooms:rooms.map(x=>({id:x.id,type:x.room_type,name:x.name,createdBy:x.created_by,createdAt:x.created_at,updatedAt:x.updated_at,memberRole:memberships.find(m=>m.room_id===x.id)?.member_role||"member"}))};
+ }
+ if(action==="chat_create_room"){
+  const type=String(b.type||"");if(!["private","group"].includes(type))throw new Error("invalid_room_type");
+  const name=String(b.name||"").trim().slice(0,80);const ids=Array.isArray(b.memberIds)?[...new Set(b.memberIds.map(String).filter(x=>x&&x!==u.id))]:[];
+  if(type==="private"&&ids.length!==1)throw new Error("private_chat_requires_one_user");
+  if(type==="group"&&(!name||ids.length<1))throw new Error("group_requires_name_and_members");
+  if(ids.length>100)throw new Error("too_many_members");
+  const people=await needData<any[]>(db.from("profiles").select("id").eq("status","active").in("id",ids),"chat_members_validate_failed");
+  if(people.length!==ids.length)throw new Error("chat_user_unavailable");
+  if(type==="private"){
+   const {data:existing,error}=await db.from("chat_rooms").select("id,room_type,name,created_by,created_at,updated_at").eq("room_type","private").eq("name",[u.id,ids[0]].sort().join(":")).maybeSingle();
+   if(error)throw new Error("chat_room_lookup_failed");if(existing)return {ok:true,room:{id:existing.id,type:"private",name:"",createdBy:existing.created_by}};
+  }
+  const room=await needData<any>(db.from("chat_rooms").insert({room_type:type,name:type==="private"?"":name,created_by:u.id,...(type==="private"?{name:[u.id,ids[0]].sort().join(":")}:{})}).select("*").single(),"chat_room_create_failed");
+  const members=[u.id,...ids].map((id,i)=>({room_id:room.id,user_id:id,member_role:id===u.id?"owner":"member"}));
+  await needData(db.from("chat_members").insert(members),"chat_members_add_failed");
+  return {ok:true,room:{id:room.id,type:room.room_type,name:room.name,createdBy:room.created_by}};
+ }
+ if(action==="chat_messages"){
+  const member=await needData<any>(db.from("chat_members").select("room_id").eq("room_id",roomId).eq("user_id",u.id).maybeSingle(),"chat_membership_check_failed");if(!member)throw new Error("chat_forbidden");
+  const rows=await needData<any[]>(db.from("chat_messages").select("id,room_id,sender_id,body,created_at").eq("room_id",roomId).order("created_at",{ascending:false}).limit(100),"chat_messages_failed");
+  const ids=[...new Set(rows.map(x=>x.sender_id))];const people=ids.length?await needData<any[]>(db.from("profiles").select("id,username").in("id",ids),"chat_sender_lookup_failed"):[];
+  return {ok:true,messages:rows.reverse().map(x=>({id:x.id,roomId:x.room_id,senderId:x.sender_id,senderName:people.find(p=>p.id===x.sender_id)?.username||"",body:x.body,createdAt:x.created_at}))};
+ }
+ if(action==="chat_send"){
+  const body=String(b.body||"").trim();if(!body||body.length>5000)throw new Error("chat_invalid_message");
+  const member=await needData<any>(db.from("chat_members").select("room_id").eq("room_id",roomId).eq("user_id",u.id).maybeSingle(),"chat_membership_check_failed");if(!member)throw new Error("chat_forbidden");
+  const row=await needData<any>(db.from("chat_messages").insert({room_id:roomId,sender_id:u.id,body}).select("id,room_id,sender_id,body,created_at").single(),"chat_send_failed");
+  await needData(db.from("chat_rooms").update({updated_at:new Date().toISOString()}).eq("id",roomId),"chat_room_update_failed");
+  return {ok:true,message:{id:row.id,roomId:row.room_id,senderId:row.sender_id,senderName:u.username,body:row.body,createdAt:row.created_at}};
+ }
+ if(action==="chat_mark_read"){
+  const member=await needData<any>(db.from("chat_members").update({last_read_at:new Date().toISOString()}).eq("room_id",roomId).eq("user_id",u.id).select("room_id").maybeSingle(),"chat_read_update_failed");if(!member)throw new Error("chat_forbidden");return {ok:true};
+ }
+ if(action==="chat_members"){
+  const member=await needData<any>(db.from("chat_members").select("room_id").eq("room_id",roomId).eq("user_id",u.id).maybeSingle(),"chat_membership_check_failed");if(!member)throw new Error("chat_forbidden");
+  const rows=await needData<any[]>(db.from("chat_members").select("user_id,member_role,joined_at").eq("room_id",roomId),"chat_members_list_failed");const ids=rows.map(x=>x.user_id);const people=await needData<any[]>(db.from("profiles").select("id,username,role").in("id",ids),"chat_members_profiles_failed");return {ok:true,members:rows.map(x=>({...people.find(p=>p.id===x.user_id),memberRole:x.member_role,joinedAt:x.joined_at}))};
+ }
+ if(action==="chat_add_members"){
+  const room=await needData<any>(db.from("chat_rooms").select("id,room_type,created_by").eq("id",roomId).maybeSingle(),"chat_room_lookup_failed");if(!room||room.room_type!=="group"||room.created_by!==u.id)throw new Error("chat_forbidden");
+  const ids=Array.isArray(b.memberIds)?[...new Set(b.memberIds.map(String).filter(x=>x&&x!==u.id))]:[];const people=ids.length?await needData<any[]>(db.from("profiles").select("id").eq("status","active").in("id",ids),"chat_members_validate_failed"):[];
+  if(people.length!==ids.length)throw new Error("chat_user_unavailable");if(ids.length)await needData(db.from("chat_members").upsert(ids.map(id=>({room_id:roomId,user_id:id,member_role:"member"})),{onConflict:"room_id,user_id"}),"chat_members_add_failed");return {ok:true};
+ }
+ return null;
+}
+
 async function notificationAction(action:string,b:any,u:any){
  if(action==="profile_language_set"){const language=b.language==="ar"?"ar":b.language==="en"?"en":"";if(!language)return out(400,{ok:false,error:"invalid_language"});const {error}=await db.from("profiles").update({preferred_language:language}).eq("id",u.id);if(error)throw new Error("profile_language_update_failed");return {ok:true,language};}
  if(action==="push_register"){
@@ -209,7 +270,7 @@ Deno.serve(async(req:Request)=>{
   const auth=await session(req,typeof b.token==="string"?b.token:"");if(!auth)return out(401,{ok:false,error:"session_invalid"});
   if(action==="me"){const {data:meta,error:revisionError}=await db.from("user_database_meta").select("revision").eq("user_id",auth.p.id).maybeSingle();if(revisionError)throw new Error("database_revision_failed");return out(200,{ok:true,user:{id:auth.p.id,username:auth.p.username,role:auth.p.role,status:auth.p.status,mustChangePassword:!!auth.p.must_change_password,preferredLanguage:auth.p.preferred_language||"en"},expiresAt:auth.s.expires_at,data:await readNotebook(auth.p.id),revision:Number(meta?.revision||0)});}
   if(action==="load"){const {data:meta,error}=await db.from("user_database_meta").select("revision").eq("user_id",auth.p.id).maybeSingle();if(error)throw new Error("database_revision_failed");return out(200,{ok:true,data:await readNotebook(auth.p.id),revision:Number(meta?.revision||0)});}
-  const assignmentResponse=await assignmentAction(action,b,auth.p);if(assignmentResponse)return out(200,assignmentResponse);const notificationResponse=await notificationAction(action,b,auth.p);if(notificationResponse)return out(200,notificationResponse);
+  const chatResponse=await chatAction(action,b,auth.p);if(chatResponse)return out(200,chatResponse);const assignmentResponse=await assignmentAction(action,b,auth.p);if(assignmentResponse)return out(200,assignmentResponse);const notificationResponse=await notificationAction(action,b,auth.p);if(notificationResponse)return out(200,notificationResponse);
    if(action==="save"){if(!b.data||typeof b.data!=="object"||Array.isArray(b.data))return out(400,{ok:false,error:"invalid_database_payload"});const {data:revision,error}=await db.rpc("replace_smartnote_database",{p_user_id:auth.p.id,p_data:b.data,p_expected_revision:Number.isInteger(Number(b.revision))?Number(b.revision):null});if(error){if(String(error.message||"").includes("data_conflict"))return out(409,{ok:false,error:"data_conflict"});console.error("NOTEBOOK SAVE ERROR:",error);return out(500,{ok:false,error:"database_save_failed"});}return out(200,{ok:true,saved:true,revision:Number(revision||0)});}
   if(action==="logout"){
    const {error}=await db.from("auth_sessions").update({revoked_at:new Date().toISOString()}).eq("id",auth.s.id);
