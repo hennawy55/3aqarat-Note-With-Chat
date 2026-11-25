@@ -60,6 +60,9 @@ declare
 begin
   if tg_op='DELETE' then row_data=to_jsonb(old); else row_data=to_jsonb(new); end if;
   target_room=coalesce(row_data->>'room_id','');
+  if target_room='' and row_data ? 'message_id' then
+    select room_id::text into target_room from public.chat_messages where id=(row_data->>'message_id')::uuid;
+  end if;
   perform realtime.send(
     jsonb_build_object('table',tg_table_name,'roomId',target_room,'userId',coalesce(row_data->>'user_id','')),
     'chat_refresh',
@@ -79,6 +82,11 @@ for each row execute function public.broadcast_smartnote_chat_change();
 drop trigger if exists smartnote_chat_members_broadcast on public.chat_members;
 create trigger smartnote_chat_members_broadcast
 after insert or update or delete on public.chat_members
+for each row execute function public.broadcast_smartnote_chat_change();
+
+drop trigger if exists smartnote_chat_receipts_broadcast on public.chat_message_receipts;
+create trigger smartnote_chat_receipts_broadcast
+after insert or update or delete on public.chat_message_receipts
 for each row execute function public.broadcast_smartnote_chat_change();
 
 drop trigger if exists smartnote_chat_reactions_broadcast on public.chat_message_reactions;
