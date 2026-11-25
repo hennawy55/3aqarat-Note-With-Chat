@@ -249,8 +249,9 @@ async function chatAction(action:string,b:any,u:any){
   const senderNames=usernames.find(p=>p.id===u.id);
   const roomTitle=room.room_type==="public"?"Public room":room.room_type==="group"?room.name:(usernames.find(p=>p.id!==u.id)?.username||"Private chat");
   const pushTargets=members.filter(m=>m.user_id!==u.id&&!m.notifications_muted);
-  const userSettings=await needData<any>(db.from("chat_user_settings").select("mute_all").eq("user_id",u.id).maybeSingle(),"chat_settings_lookup_failed");
-  if(!userSettings?.mute_all)for(const target of pushTargets){
+  const settingsRows=pushTargets.length?await needData<any[]>(db.from("chat_user_settings").select("user_id,mute_all").in("user_id",pushTargets.map(x=>x.user_id)),"chat_settings_lookup_failed"):[];
+  for(const target of pushTargets){
+   if(settingsRows.find(x=>x.user_id===target.user_id)?.mute_all)continue;
    const profile=usernames.find(p=>p.id===target.user_id),isMentioned=mentionedIds.has(target.user_id),excerpt=body.length>110?body.slice(0,107)+"...":body;
    const title=profile?.preferred_language==="en"?(isMentioned?"You were mentioned in a chat":"New message · "+roomTitle):(isMentioned?"تم ذكرك في محادثة":"رسالة جديدة · "+roomTitle);
    const text=profile?.preferred_language==="en"?(isMentioned?senderNames?.username+" mentioned you in "+roomTitle:senderNames?.username+": "+excerpt):(isMentioned?senderNames?.username+" ذكرك في "+roomTitle:senderNames?.username+": "+excerpt);
