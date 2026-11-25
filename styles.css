@@ -674,3 +674,13 @@ html.native-chat-room-open .chat-message-list{flex:1 1 auto;min-height:0;overflo
 html.native-chat-room-open .chat-composer{flex:none;padding:9px 10px calc(9px + env(safe-area-inset-bottom));background:var(--panel,#10192b)}
 html.native-chat-room-open .chat-composer textarea{resize:none;max-height:110px;min-height:44px}
 html.native-chat-room-open .chat-mention-menu{position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));}
+
+
+/* Chat page header actions: place New Chat in the shared page header. */
+#chatHeaderNew[hidden]{display:none!important}
+.chat-sidebar-title{min-width:0}
+.chat-sidebar-title-row{display:flex;align-items:center;gap:8px}
+.chat-sidebar-title-row h2{margin:0}
+.chat-sidebar-title-row #chatMuteAll{width:34px;height:34px;flex:none}
+.chat-sidebar-head{align-items:flex-start}
+.chat-sidebar-tools{display:none!important}
