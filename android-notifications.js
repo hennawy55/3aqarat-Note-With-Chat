@@ -206,6 +206,16 @@ if (isNative) {
   });
   PushNotifications.addListener('pushNotificationReceived', notification => {
     window.dispatchEvent(new CustomEvent('smartnote-push-received', { detail: notification }));
+    const data = notification?.data || {};
+    if (typeof data.roomId === 'string' && data.roomId) {
+      window.smartNoteNativeNotifications?.showInstantNotification({
+        id: 'chat:' + String(data.messageId || Date.now()),
+        title: notification.title || (isEnglish ? 'New chat message' : 'رسالة محادثة جديدة'),
+        body: notification.body || '',
+        roomId: data.roomId,
+        messageId: data.messageId || ''
+      }).catch(error => console.warn('Could not show foreground chat notification:', error));
+    }
   });
   PushNotifications.addListener('pushNotificationActionPerformed', event => {
     const data = event.notification?.data || {};
