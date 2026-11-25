@@ -599,7 +599,7 @@
       const tokenDigest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(authToken));
       const tokenTopic=Array.from(new Uint8Array(tokenDigest),byte=>byte.toString(16).padStart(2,'0')).join('');
       realtimeChannel=realtimeClient.channel('smartnote-session:'+tokenTopic,{config:{private:false,broadcast:{self:false}}});
-      realtimeChannel.on('broadcast',{event:'refresh'},({payload})=>{
+      const handleRealtimeBroadcast=({payload},delay=220)=>{
         if(payload?.table)realtimePendingTables.add(String(payload.table));
         clearTimeout(realtimeRefreshTimer);
         realtimeRefreshTimer=setTimeout(async()=>{
@@ -614,8 +614,11 @@
           if(changed.includes('notifications'))await refreshUnifiedNotifications(false,true);else if(changed.some(table=>['assignments','reassignment_requests'].includes(table)))await refreshUnifiedNotifications();
           const chatTables=changed.filter(table=>String(table).startsWith('chat_'));if(chatTables.length)window.dispatchEvent(new CustomEvent('smartnote-chat-refresh',{detail:{tables:chatTables}}));
           if(changed.includes('profiles')&&currentUser?.role==='admin'&&document.getElementById('adminPanel')?.style.display==='flex')await openAdminPanel();
-        },220);
-      }).subscribe(status=>{
+        },delay);
+      };
+      realtimeChannel.on('broadcast',{event:'refresh'},event=>handleRealtimeBroadcast(event,220));
+      realtimeChannel.on('broadcast',{event:'chat_refresh'},event=>handleRealtimeBroadcast(event,40));
+      realtimeChannel.subscribe(status=>{
         if(status==='SUBSCRIBED')setConnection(true,assignmentText('Live synchronization is active','Live synchronization is active'));
         else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('SmartNote Realtime status:',status);
       });
