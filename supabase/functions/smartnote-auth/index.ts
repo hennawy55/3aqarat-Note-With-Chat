@@ -270,6 +270,12 @@ async function chatAction(action:string,b:any,u:any){
   const ids=unread.map(x=>x.id);if(ids.length)await needData(db.from("chat_message_receipts").update({read_at:now,delivered_at:now}).eq("user_id",u.id).in("message_id",ids).is("read_at",null),"chat_read_receipts_update_failed");
   return {ok:true,readAt:now};
  }
+ if(action==="chat_mark_all_read"){
+  const now=new Date().toISOString();
+  await needData(db.from("chat_members").update({last_read_at:now}).eq("user_id",u.id),"chat_read_all_members_failed");
+  await needData(db.from("chat_message_receipts").update({read_at:now,delivered_at:now}).eq("user_id",u.id).is("read_at",null),"chat_read_all_receipts_failed");
+  return {ok:true,readAll:true};
+ }
  if(action==="chat_react"){
   await requireMember(roomId);const messageId=String(b.messageId||""),emoji=String(b.emoji||"");
   if(!["👍","❤️","😂","😮","😢","🙏"].includes(emoji))throw new Error("chat_invalid_reaction");
