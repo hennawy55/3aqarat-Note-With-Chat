@@ -104,7 +104,7 @@
   let authToken='', currentUser=null;
   const TYPES=['workspaces','projects','units','notes','clients','tasks'];
   const LABELS={workspaces:'مساحة العمل',projects:'مشروع',units:'وحدة',notes:'ملاحظة',clients:'عميل',tasks:'متابعة'};
-  const TITLES={dashboard:['لوحة التحكم','نظرة عامة سريعة على بياناتك العقارية'],assigned:['المتابعات المسندة','المتابعات المسندة إليك أو التي تديرها'],workspaces:['مساحات العمل','نظّم بياناتك في مساحات عمل منفصلة'],projects:['المشاريع','مكان واحد لجميع مشاريعك'],units:['الوحدات','تفاصيل الوحدات وأسعارها'],notes:['الملاحظات الذكية','كل المعلومات التي قمت بحفظها'],clients:['العملاء','تفاصيل العملاء واحتياجاتهم'],tasks:['المتابعات','المهام والتذكيرات القادمة']};
+  const TITLES={chat:[document.documentElement.lang==='en'?'Chat':'الدردشة',document.documentElement.lang==='en'?'Internal team conversations':'محادثات الفريق الداخلية'],dashboard:['لوحة التحكم','نظرة عامة سريعة على بياناتك العقارية'],assigned:['المتابعات المسندة','المتابعات المسندة إليك أو التي تديرها'],workspaces:['مساحات العمل','نظّم بياناتك في مساحات عمل منفصلة'],projects:['المشاريع','مكان واحد لجميع مشاريعك'],units:['الوحدات','تفاصيل الوحدات وأسعارها'],notes:['الملاحظات الذكية','كل المعلومات التي قمت بحفظها'],clients:['العملاء','تفاصيل العملاء واحتياجاتهم'],tasks:['المتابعات','المهام والتذكيرات القادمة']};
   const QUICK_ACTIONS={workspaces:['workspace','مساحة عمل جديدة'],projects:['project','مشروع جديد'],units:['unit','وحدة جديدة'],notes:['note','ملاحظة جديدة'],clients:['client','عميل جديد'],tasks:['task','متابعة جديدة']};
   const emptyDB=()=>({version:1,workspaces:[],projects:[],units:[],notes:[],clients:[],tasks:[]});
   let db=emptyDB(), editing=null, isReady=false, saveQueue=Promise.resolve(), syncInFlight=false, writesInProgress=0, localRevision=0, cloudRevision=0;
@@ -321,6 +321,7 @@
     if(key)assignmentRequestsInFlight.set(key,request);
     try{return await request}finally{if(key&&assignmentRequestsInFlight.get(key)===request)assignmentRequestsInFlight.delete(key)}
   }
+  window.smartNoteApiPost=apiPost;window.smartNoteCurrentUser=()=>currentUser;
   function cloudPayload(state){return {...state,spaces:state.workspaces||[]}}
   async function saveDatabase(nextState){
     const snapshot=cloudPayload(nextState);
@@ -445,9 +446,10 @@
     ['assignedSearch','assignedAssigneeFilter','assignedPriorityFilter','assignedDateFrom','assignedDateTo'].forEach(id=>document.getElementById(id)?.addEventListener(id==='assignedSearch'?'input':'change',renderAssignedView));
     const av=document.getElementById('view-assigned');if(av&&!av.dataset.bound){av.dataset.bound='1';av.addEventListener('click',async e=>{const o=e.target.closest('[data-assignment-open]'),s=e.target.closest('[data-assignment-save]');if(o)await openAssignedDetail(o.dataset.assignmentOpen);if(s){const id=s.dataset.assignmentSave,sel=av.querySelector('[data-assignment-status="'+CSS.escape(id)+'"]');try{await apiPost({action:'assignment_status',assignmentId:id,status:sel.value});toast(assignmentText('Status updated.','Status updated'));await loadAssignedView()}catch(err){toast(err)}}})}
     refreshUnifiedNotifications();
+    window.dispatchEvent(new Event('smartnote-ready'));
     startRealtimeSync();
     // Assignment navigation is integrated into the primary navigation.
-    if(!document.getElementById('logoutButton')){const b=document.createElement('button');b.id='logoutButton';b.className='btn small';b.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');b.onclick=async()=>{try{await apiPost({action:'logout'})}catch(_){}stopRealtimeSync();authToken='';currentUser=null;isReady=false;localStorage.removeItem(SESSION_KEY);showLogin('You have been signed out.');document.getElementById('adminUsersButton')?.remove();b.remove()};document.querySelector('.top-actions').prepend(b)}
+    if(!document.getElementById('logoutButton')){const b=document.createElement('button');b.id='logoutButton';b.className='btn small';b.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');b.onclick=async()=>{try{await apiPost({action:'logout'})}catch(_){}stopRealtimeSync();window.dispatchEvent(new Event('smartnote-logout'));authToken='';currentUser=null;isReady=false;localStorage.removeItem(SESSION_KEY);showLogin('You have been signed out.');document.getElementById('adminUsersButton')?.remove();b.remove()};document.querySelector('.top-actions').prepend(b)}
 
   }
   window.addEventListener('app-language-change',()=>{const button=document.getElementById('logoutButton');if(button)button.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');const w=document.getElementById('welcomeUser');if(w&&currentUser)w.textContent=(document.documentElement.lang==='en'?'Welcome, ':'Welcome, ')+currentUser.username;if(currentView==='assigned')loadAssignedView();refreshUnifiedNotifications()});
