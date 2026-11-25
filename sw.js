@@ -78,16 +78,18 @@ self.addEventListener('notificationclick', event => {
   const data = event.notification.data || {};
   const taskId = data.taskId;
   const assignmentId = data.assignmentId;
+  const roomId = data.roomId;
   const alertKey = data.key;
-  if (!taskId && !assignmentId) return;
+  if (!taskId && !assignmentId && !roomId) return;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of windows) {
-      if (assignmentId) client.postMessage({ type: 'OPEN_ASSIGNED_NOTIFICATION', assignmentId, notificationId: data.notificationId });
+      if (roomId) client.postMessage({ type: 'OPEN_CHAT_NOTIFICATION', roomId, messageId: data.messageId || '' });
+      else if (assignmentId) client.postMessage({ type: 'OPEN_ASSIGNED_NOTIFICATION', assignmentId, notificationId: data.notificationId });
       else client.postMessage({ type: 'OPEN_TASK_NOTIFICATION', taskId, key: alertKey });
       if ('focus' in client) return client.focus();
     }
-    const target = taskId ? `./?openTask=${encodeURIComponent(taskId)}` : './';
+    const target = roomId ? `./?openChat=${encodeURIComponent(roomId)}` : taskId ? `./?openTask=${encodeURIComponent(taskId)}` : './';
     return self.clients.openWindow(target);
   })());
 });
