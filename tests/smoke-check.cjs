@@ -25,7 +25,7 @@ assert(edge.includes('p_expected_revision') && edge.includes('revision:Number(me
 assert(migrationAuth.includes('drop constraint if exists profiles_id_fkey'), 'Custom login identities must not require Supabase Auth users');
 assert(migrationDb.includes('user_database_meta') && migrationDb.includes("raise exception 'data_conflict'"), 'Database replacement must guard against cross-device stale writes');
 assert(html.includes('./lucide.min.js') && !html.includes('lucide@latest'), 'Lucide must be loaded from a local pinned asset');
-assert(worker.includes('smartnote-offline-shell-v33') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
+assert(worker.includes('smartnote-offline-shell-v34') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
 assert(packageJson.dependencies.lucide === '0.468.0', 'Lucide version must remain pinned');
 assert(packageJson.scripts['prepare:android'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Android build must bundle the local Lucide runtime');
 assert(packageJson.scripts['prepare:web'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Web build must bundle the local Lucide runtime');
