@@ -189,6 +189,9 @@ async function chatAction(action:string,b:any,u:any){
   const settings=await needData<any>(db.from("chat_user_settings").select("mute_all").eq("user_id",u.id).maybeSingle(),"chat_settings_lookup_failed");
   const enriched=await Promise.all(rooms.map(async room=>{
    const membership=memberships.find(m=>m.room_id===room.id),lastRead=membership?.last_read_at||"1970-01-01T00:00:00.000Z";
+   const incoming=await needData<any[]>(db.from("chat_messages").select("id").eq("room_id",room.id).neq("sender_id",u.id).gt("created_at",lastRead).limit(1000),"chat_incoming_messages_failed");
+   const incomingIds=incoming.map(x=>x.id);
+   if(incomingIds.length)await needData(db.from("chat_message_receipts").update({delivered_at:new Date().toISOString()}).eq("user_id",u.id).in("message_id",incomingIds).is("delivered_at",null),"chat_delivery_update_failed");
    const latestRows=await needData<any[]>(db.from("chat_messages").select("id,sender_id,body,created_at").eq("room_id",room.id).order("created_at",{ascending:false}).limit(1),"chat_last_message_failed");
    const latest=latestRows[0]||null;
    const countResult=await db.from("chat_messages").select("id",{count:"exact",head:true}).eq("room_id",room.id).neq("sender_id",u.id).gt("created_at",lastRead);
