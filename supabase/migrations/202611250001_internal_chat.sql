@@ -1,4 +1,4 @@
--- Internal SmartNote chat: public room, private conversations and groups.
+-- Internal SmartNote chat schema. All data access is mediated by the authenticated Edge Function.
 create table if not exists public.chat_rooms (
  id uuid primary key default gen_random_uuid(),
  room_type text not null check (room_type in ('public','private','group')),
