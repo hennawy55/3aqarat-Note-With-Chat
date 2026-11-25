@@ -30,3 +30,8 @@ alter table public.chat_members enable row level security;
 alter table public.chat_messages enable row level security;
 revoke all on public.chat_rooms,public.chat_members,public.chat_messages from anon,authenticated;
 grant all on public.chat_rooms,public.chat_members,public.chat_messages to service_role;
+
+-- Provision the shared room for existing installations; later users join on first chat load.
+insert into public.chat_rooms(room_type,name,created_by)
+select 'public','',id from public.profiles order by created_at limit 1
+on conflict (room_type) where room_type='public' do nothing;
