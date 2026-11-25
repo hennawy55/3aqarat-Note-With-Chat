@@ -250,7 +250,7 @@ async function chatAction(action:string,b:any,u:any){
   await needData(db.from("chat_rooms").update({updated_at:new Date().toISOString()}).eq("id",roomId),"chat_room_update_failed");
   const room=await needData<any>(db.from("chat_rooms").select("room_type,name").eq("id",roomId).single(),"chat_room_lookup_failed");
   const senderNames=usernames.find(p=>p.id===u.id);
-  const roomTitle=room.room_type==="public"?"Public room":room.room_type==="group"?room.name:(usernames.find(p=>p.id!==u.id)?.username||"Private chat");
+  const roomTitle=room.room_type==="public"?(usernames.find(p=>p.id===u.id)?.preferred_language==="en"?"Public room":"الغرفة العامة"):room.room_type==="group"?room.name:(usernames.find(p=>p.id!==u.id)?.username||"Private chat");
   const pushTargets=members.filter(m=>m.user_id!==u.id&&!m.notifications_muted);
   const settingsRows=pushTargets.length?await needData<any[]>(db.from("chat_user_settings").select("user_id,mute_all").in("user_id",pushTargets.map(x=>x.user_id)),"chat_settings_lookup_failed"):[];
   for(const target of pushTargets){
