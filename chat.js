@@ -104,6 +104,6 @@ function ready(){if(initialized)return;initialized=true;ensure();if(localStorage
 document.addEventListener('click',e=>{const b=e.target.closest('[data-view="chat"]');if(b){setTimeout(()=>{ensure();load()},0)}});
 window.addEventListener('smartnote-open-chat',async event=>{const id=event.detail?.roomId;if(!id)return;openChatView();await load();if(rooms.some(r=>r.id===id))selectRoom(id)});
 navigator.serviceWorker?.addEventListener('message',event=>{if(event.data?.type==='OPEN_CHAT_NOTIFICATION'&&typeof event.data.roomId==='string'){window.dispatchEvent(new CustomEvent('smartnote-open-chat',{detail:event.data}))}});
-window.addEventListener('smartnote-ready',ready);window.addEventListener('smartnote-logout',()=>{initialized=false;clearInterval(pollTimer);clearInterval(presenceTimer);realtimeChannel=false;rooms=[];users=[];activeRoom=null;messages=[];});
+window.addEventListener('smartnote-ready',ready);window.addEventListener('smartnote-logout',()=>{initialized=false;clearInterval(pollTimer);clearInterval(presenceTimer);rooms=[];users=[];activeRoom=null;messages=[];});
 if(current())ready();
 })();
