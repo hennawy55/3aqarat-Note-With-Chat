@@ -8,6 +8,7 @@ on:
       - 'app.js'
       - 'app.ar.js'
       - 'app.en.js'
+      - 'chat.js'
       - 'index-en.html'
       - 'index-ar.html'
       - 'language.js'
@@ -18,6 +19,7 @@ on:
       - 'android-*.js'
       - 'supabase/**'
       - 'tests/**'
+      - 'sw.js'
       - '.github/workflows/android-apk.yml'
 
 jobs:
