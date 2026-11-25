@@ -25,7 +25,7 @@ assert(edge.includes('p_expected_revision') && edge.includes('revision:Number(me
 assert(migrationAuth.includes('drop constraint if exists profiles_id_fkey'), 'Custom login identities must not require Supabase Auth users');
 assert(migrationDb.includes('user_database_meta') && migrationDb.includes("raise exception 'data_conflict'"), 'Database replacement must guard against cross-device stale writes');
 assert(html.includes('./lucide.min.js') && !html.includes('lucide@latest'), 'Lucide must be loaded from a local pinned asset');
-assert(worker.includes('smartnote-offline-shell-v37') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
+assert(worker.includes('smartnote-offline-shell-v38') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
 assert(packageJson.dependencies.lucide === '0.468.0', 'Lucide version must remain pinned');
 assert(packageJson.scripts['prepare:android'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Android build must bundle the local Lucide runtime');
 assert(packageJson.scripts['prepare:web'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Web build must bundle the local Lucide runtime');
@@ -53,12 +53,14 @@ assert(edge.includes('otherUserId') && chat.includes('chat-title-presence'), 'Pr
 assert(chat.includes('chatInboxButton') && chat.includes('chatInboxPanel') && chat.includes('chat_mark_all_read'), 'Chat icon must open a de-duplicated conversation inbox with mark-all-read');
 assert(chat.includes('data-reply') && chat.includes('chat_react') && chat.includes('@all') && chat.includes('data-mention'), 'Chat must support replies, reactions and user/all mentions');
 assert(chat.includes('chat_presence') && chat.includes('chat_mute_all') && chat.includes('chat_mute'), 'Chat must expose active users and global/per-room mute controls');
-assert(chat.includes("e.key==='Enter'&&!e.shiftKey") && chat.includes('is-mobile-conversation'), 'Chat must send on Enter and use full-screen mobile conversation navigation');
+assert(chat.includes("e.key==='Enter'&&!e.shiftKey") && chat.includes('is-mobile-conversation') && chat.includes('native-chat-room-open') && chat.includes('window.smartNoteChatBack') && !chat.includes('finally{busy=false;input.focus()}'), 'Chat must use a full-screen native conversation, preserve keyboard focus and return to the room list');
+assert(styles.includes('html.native-chat-room-open .topbar') && styles.includes('html.native-chat-room-open .chat-conversation-head{display:none!important}'), 'Native chat must hide app and conversation headers');
+assert(nativeNotifications.includes("classList.add('capacitor-native')"), 'Native bridge must mark Android runtime for native-only layout');
 assert(edge.includes('chat_message_receipts') && edge.includes('chat_mark_all_read') && edge.includes('chat_message_reactions') && edge.includes('chat_presence'), 'Chat API must implement delivery/read receipts, reactions and presence');
 assert(edge.includes('type:isMentioned?"chat_mention":"chat_message"') && edge.includes('extraData:Record<string,string>'), 'Chat messages must send typed push notifications');
 assert(chatFeatures.includes('broadcast_smartnote_chat_change') && chatFeatures.includes('chat_message_receipts') && chatFeatures.includes('chat_user_settings'), 'Chat feature migration must provision receipts, mute settings and realtime broadcasts');
 assert(chatSingleReaction.includes('chat_message_reactions_one_per_user_idx') && chatSingleReaction.includes('partition by message_id, user_id'), 'A user must have at most one reaction per message');
-assert(worker.includes('smartnote-offline-shell-v37') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
+assert(worker.includes('smartnote-offline-shell-v38') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
 assert(nativeNotifications.includes('smartnote-open-chat') && nativeNotifications.includes('roomId'), 'Android push notification taps must open the target conversation');
 assert(nativeNotifications.includes('pushNotificationReceived') && nativeNotifications.includes('showInstantNotification') && nativeNotifications.includes('foreground chat notification'), 'Android must display incoming chat notifications while the app is open');
 assert(app.includes('smartnote-chat-refresh'), 'App shell must forward private session realtime events to the chat view');
