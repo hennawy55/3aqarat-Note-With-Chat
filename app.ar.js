@@ -775,7 +775,6 @@
   window.addEventListener('smartnote-open-assignment',event=>{const id=event.detail?.assignmentId;if(id){showView('assigned');openAssignedDetail(id)}});
   window.addEventListener('smartnote-open-task',event=>{const taskId=event.detail?.taskId;if(typeof taskId==='string'){const alert=taskAlerts.find(x=>x.key===event.detail?.key);if(alert){alert.isRead=true;persistTaskAlertState();renderTaskAlerts()}showView('tasks');if(get('tasks',taskId))openForm('task',taskId)}});
   function handleAppBack(){
-    if(window.smartNoteChatBack?.())return;
     const modal=document.querySelector('.modal-backdrop.show');if(modal){modal.classList.remove('show');editing=null;return}
     const notificationPanel=document.getElementById('notificationPanel');if(notificationPanel&&!notificationPanel.hidden){notificationPanel.hidden=true;document.getElementById('notificationBell').setAttribute('aria-expanded','false');return}
     if(currentView!=='dashboard'){showView('dashboard');return}

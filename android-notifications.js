@@ -4,7 +4,6 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
 const isNative = Capacitor.isNativePlatform();
-if (isNative) document.documentElement.classList.add('capacitor-native');
 const isEnglish = (() => { try { return localStorage.getItem('aqarLanguage') === 'en'; } catch { return false; } })();
 let channelReady = false;
 let lastScheduleSignature = '';
