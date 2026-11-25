@@ -46,8 +46,7 @@ async function load(){
  try{const [r,u]=await Promise.all([call('chat_rooms'),call('chat_users')]);rooms=r.rooms||[];roomsLoaded=true;users=u.users||[];globalMute=!!r.muteAll;applyPresenceToRooms();renderRooms();renderInbox();if(activeRoom){const fresh=rooms.find(x=>x.id===activeRoom.id);if(fresh)activeRoom=fresh;else{activeRoom=null;backToRooms()};if(activeRoom&&active())await loadMessages(true)}}
  catch(e){if($('chatRoomList'))$('chatRoomList').innerHTML='<div class="chat-empty">'+esc(tr('تعذر تحميل المحادثات: ','Could not load chats: ')+e.message)+'</div>'}
 }
-async function refreshRooms(notify=false){try{const previous=new Map(rooms.map(r=>[r.id,r.lastMessage?.id]));const hadRooms=roomsLoaded;const r=await call('chat_rooms');rooms=r.rooms||[];globalMute=!!r.muteAll;roomsLoaded=true;if(notify&&hadRooms){for(const room of rooms){const latest=room.lastMessage;if(latest&&latest.senderId!==current()?.id&&previous.get(room.id)!==latest.id&&!(activeRoom?.id===room.id&&active()))showIncomingToast(room,latest)}}applyPresenceToRooms();renderRooms();renderInbox()}catch(e){console.warn('Chat room refresh failed',e)}}
-function showIncomingToast(room,message){let host=$('chatLiveToasts');if(!host){host=document.createElement('div');host.id='chatLiveToasts';host.className='chat-live-toasts';document.body.append(host)}const item=document.createElement('button');item.type='button';item.className='chat-live-toast';item.innerHTML='<span class="chat-live-toast-icon"><i data-lucide="message-circle"></i></span><span class="chat-live-toast-copy"><strong>'+esc(roomName(room))+' · '+esc(users.find(u=>u.id===message.senderId)?.username||tr('رسالة جديدة','New message'))+'</strong><small>'+esc(message.body)+'</small></span><span class="chat-live-toast-close" aria-hidden="true">×</span>';item.onclick=()=>{closeInbox();openChatView();selectRoom(room.id);item.remove()};host.append(item);if(window.lucide)window.lucide.createIcons();setTimeout(()=>item.remove(),7000)}
+async function refreshRooms(){try{const r=await call('chat_rooms');rooms=r.rooms||[];globalMute=!!r.muteAll;roomsLoaded=true;applyPresenceToRooms();renderRooms();renderInbox()}catch(e){console.warn('Chat room refresh failed',e)}}
 function roomName(r){if(r.type==='public')return tr('الغرفة العامة','Public room');if(r.type==='group')return r.name;return r.otherUsername||tr('محادثة خاصة','Private chat')}
 function preview(r){const m=r.lastMessage;if(!m)return tr('لا توجد رسائل بعد','No messages yet');const sender=m.senderId===current()?.id?tr('أنت: ','You: '):(users.find(u=>u.id===m.senderId)?.username||'')+': ';return sender+m.body}
 function renderRooms(){
@@ -100,7 +99,7 @@ function connectRealtime(){
   const tables=event.detail?.tables||[];
   if(tables.includes('chat_presence'))return;
   const roomId=activeRoom?.id,showingConversation=!!(roomId&&active());
-  const roomsUpdate=refreshRooms(true);
+  const roomsUpdate=refreshRooms();
   if(showingConversation){await Promise.all([roomsUpdate,loadMessages(true)]);await call('chat_mark_read',{roomId}).catch(()=>{})}else await roomsUpdate;
  });
 }
