@@ -46,7 +46,7 @@ const chatFeatures = read('supabase/migrations/202611250002_chat_features.sql');
 const chatSingleReaction = read('supabase/migrations/202611260001_chat_single_reaction.sql');
 assert(chat.includes("smartnote-chat-refresh") && chat.includes('realtimeChannel=true'), 'Chat page must consume authenticated session-scoped realtime broadcasts');
 assert(!chat.includes('showIncomingToast') && !chat.includes('chat-live-toast'), 'Incoming chat messages must not show in-app toast popups');
-assert(chat.includes('showDesktopChatNotification') && chat.includes("Notification.permission==='granted'") && chat.includes("tag:'smartnote-chat-'+message.id"), 'Incoming chat messages must use deduplicated desktop system notifications when permission is granted');
+assert(chat.includes('showDesktopChatNotification') && chat.includes("Notification.permission!=='granted'") && chat.includes("tag:'smartnote-chat-'+message.id"), 'Incoming chat messages must use deduplicated desktop system notifications when permission is granted');
 assert(chat.includes("document.querySelectorAll('#sideNav") && chat.includes('chatNavProxy') && chat.includes('b.remove()'), 'Chat shortcut must be removed from visible navigation but retain programmatic routing');
 assert(chat.includes('data-react-users') && edge.includes('chat_reaction_update_failed'), 'Reaction chips must expose reacting users and update a single reaction per user');
 assert(edge.includes('otherUserId') && chat.includes('chat-title-presence'), 'Private chat presence must appear in the list and conversation header');
