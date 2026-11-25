@@ -107,7 +107,7 @@ if (isNative) {
       return granted;
     },
 
-    async showInstantNotification({ id, title, body, assignmentId = '', notificationId = '' } = {}) {
+    async showInstantNotification({ id, title, body, assignmentId = '', notificationId = '', roomId = '', messageId = '' } = {}) {
       if (!(await hasPermission(false))) return;
       await ensureChannel();
       const notificationIdNumber = stableId('server:' + (id || notificationId || Date.now()));
@@ -119,7 +119,7 @@ if (isNative) {
           schedule: { at: new Date(Date.now() + 1000) },
           channelId: 'smartnote-reminders',
           smallIcon: 'ic_launcher',
-          extra: { smartNoteServerNotification: true, assignmentId, notificationId }
+          extra: { smartNoteServerNotification: true, assignmentId, notificationId, roomId, messageId }
         }]
       });
     },
@@ -208,8 +208,9 @@ if (isNative) {
     window.dispatchEvent(new CustomEvent('smartnote-push-received', { detail: notification }));
   });
   PushNotifications.addListener('pushNotificationActionPerformed', event => {
-    const assignmentId = event.notification?.data?.assignmentId;
-    if (typeof assignmentId === 'string' && assignmentId) window.dispatchEvent(new CustomEvent('smartnote-open-assignment', { detail: { assignmentId } }));
+    const data = event.notification?.data || {};
+    if (typeof data.roomId === 'string' && data.roomId) window.dispatchEvent(new CustomEvent('smartnote-open-chat', { detail: { roomId: data.roomId, messageId: data.messageId || '' } }));
+    else if (typeof data.assignmentId === 'string' && data.assignmentId) window.dispatchEvent(new CustomEvent('smartnote-open-assignment', { detail: { assignmentId: data.assignmentId } }));
   });
 
   LocalNotifications.addListener('localNotificationActionPerformed', event => {
@@ -217,6 +218,9 @@ if (isNative) {
     const taskId = extra.taskId;
     if (typeof taskId === 'string') {
       window.dispatchEvent(new CustomEvent('smartnote-open-task', { detail: { taskId, key: extra.key } }));
+    }
+    if (typeof extra.roomId === 'string' && extra.roomId) {
+      window.dispatchEvent(new CustomEvent('smartnote-open-chat', { detail: { roomId: extra.roomId, messageId: extra.messageId || '' } }));
     }
     if (typeof extra.assignmentId === 'string' && extra.assignmentId) {
       window.dispatchEvent(new CustomEvent('smartnote-open-assignment', { detail: { assignmentId: extra.assignmentId } }));
