@@ -50,6 +50,8 @@ assert(edge.includes('type:isMentioned?"chat_mention":"chat_message"') && edge.i
 assert(chatFeatures.includes('broadcast_smartnote_chat_change') && chatFeatures.includes('chat_message_receipts') && chatFeatures.includes('chat_user_settings'), 'Chat feature migration must provision receipts, mute settings and realtime broadcasts');
 assert(worker.includes('smartnote-offline-shell-v34') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
 assert(nativeNotifications.includes('smartnote-open-chat') && nativeNotifications.includes('roomId'), 'Android push notification taps must open the target conversation');
+assert(nativeNotifications.includes('pushNotificationReceived') && nativeNotifications.includes('showInstantNotification') && nativeNotifications.includes('foreground chat notification'), 'Android must display incoming chat notifications while the app is open');
+assert(app.includes('smartnote-chat-refresh'), 'App shell must forward private session realtime events to the chat view');
 
 console.log('SmartNote Supabase migration smoke checks passed.');
 
