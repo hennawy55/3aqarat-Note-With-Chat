@@ -571,7 +571,7 @@ html[dir="ltr"] .mobile-nav{direction:ltr}
 
 
 /* SmartNote chat workspace and message-center enhancements */
-.chat-inbox-center{position:relative;display:flex;align-items:center;flex:none}.top-actions>.chat-inbox-center{order:1}.top-actions>.notification-center{order:0}.chat-inbox-panel{inset-inline-start:auto;inset-inline-end:0}
+.chat-inbox-center{position:relative;display:flex;align-items:center;flex:none}.top-actions>.chat-inbox-center{order:0}.top-actions>.notification-center{order:0}.chat-inbox-panel{inset-inline-start:auto;inset-inline-end:0}
 .chat-inbox-button{position:relative;display:grid;place-items:center}
 .chat-inbox-button>svg{width:19px;height:19px}
 .chat-inbox-panel{z-index:1150;inset-block-start:calc(100% + 10px);inset-inline-end:0;width:min(390px,calc(100vw - 28px))}
