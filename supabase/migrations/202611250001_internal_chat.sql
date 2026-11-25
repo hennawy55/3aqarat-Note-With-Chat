@@ -16,6 +16,7 @@ create table if not exists public.chat_members (
  last_read_at timestamptz,
  primary key(room_id,user_id)
 );
+create unique index if not exists chat_private_pair_unique_idx on public.chat_rooms(name) where room_type='private';
 create index if not exists chat_members_user_idx on public.chat_members(user_id,joined_at desc);
 create table if not exists public.chat_messages (
  id uuid primary key default gen_random_uuid(),
