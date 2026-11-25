@@ -9,7 +9,7 @@
   let authToken='', currentUser=null;
   const TYPES=['workspaces','projects','units','notes','clients','tasks'];
   const LABELS={workspaces:'Workspace',projects:'Project',units:'Unit',notes:'Note',clients:'Client',tasks:'متابعة'};
-  const TITLES={dashboard:['Dashboard','A quick overview of your real estate data'],assigned:['Assigned follow-ups','Tasks assigned to you or managed by you'],workspaces:['Workspaces','Organize your data into separate workspaces'],projects:['Projects','One place for all your projects'],units:['Units','Unit details and pricing'],notes:['Smart notes','All the information you have saved'],clients:['Clients','Client details and requirements'] ,tasks:['Follow-ups','Upcoming tasks and reminders']};
+  const TITLES={chat:[document.documentElement.lang==='en'?'Chat':'الدردشة',document.documentElement.lang==='en'?'Internal team conversations':'محادثات الفريق الداخلية'],dashboard:['Dashboard','A quick overview of your real estate data'],assigned:['Assigned follow-ups','Tasks assigned to you or managed by you'],workspaces:['Workspaces','Organize your data into separate workspaces'],projects:['Projects','One place for all your projects'],units:['Units','Unit details and pricing'],notes:['Smart notes','All the information you have saved'],clients:['Clients','Client details and requirements'] ,tasks:['Follow-ups','Upcoming tasks and reminders']};
   const QUICK_ACTIONS={workspaces:['workspace','New workspace'],projects:['project','New project'],units:['unit','New unit'],notes:['note','New note'],clients:['client','New client'],tasks:['task','New follow-up']};
   const emptyDB=()=>({version:1,workspaces:[],projects:[],units:[],notes:[],clients:[],tasks:[]});
   let db=emptyDB(), editing=null, isReady=false, saveQueue=Promise.resolve(), syncInFlight=false, writesInProgress=0, localRevision=0, cloudRevision=0;
@@ -226,6 +226,7 @@
     if(key)assignmentRequestsInFlight.set(key,request);
     try{return await request}finally{if(key&&assignmentRequestsInFlight.get(key)===request)assignmentRequestsInFlight.delete(key)}
   }
+  window.smartNoteApiPost=apiPost;window.smartNoteCurrentUser=()=>currentUser;
   function cloudPayload(state){return {...state,spaces:state.workspaces||[]}}
   async function saveDatabase(nextState){
     const snapshot=cloudPayload(nextState);
@@ -350,9 +351,10 @@
     ['assignedSearch','assignedAssigneeFilter','assignedPriorityFilter','assignedDateFrom','assignedDateTo'].forEach(id=>document.getElementById(id)?.addEventListener(id==='assignedSearch'?'input':'change',renderAssignedView));
     const av=document.getElementById('view-assigned');if(av&&!av.dataset.bound){av.dataset.bound='1';av.addEventListener('click',async e=>{const o=e.target.closest('[data-assignment-open]'),s=e.target.closest('[data-assignment-save]');if(o)await openAssignedDetail(o.dataset.assignmentOpen);if(s){const id=s.dataset.assignmentSave,sel=av.querySelector('[data-assignment-status="'+CSS.escape(id)+'"]');try{await apiPost({action:'assignment_status',assignmentId:id,status:sel.value});toast(assignmentText('Status updated.','Status updated'));await loadAssignedView()}catch(err){toast(err)}}})}
     refreshUnifiedNotifications();
+    window.dispatchEvent(new Event('smartnote-ready'));
     startRealtimeSync();
     // Assignment navigation is integrated into the primary navigation.
-    if(!document.getElementById('logoutButton')){const b=document.createElement('button');b.id='logoutButton';b.className='btn small';b.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');b.onclick=async()=>{try{await apiPost({action:'logout'})}catch(_){}stopRealtimeSync();authToken='';currentUser=null;isReady=false;localStorage.removeItem(SESSION_KEY);showLogin('You have been signed out.');document.getElementById('adminUsersButton')?.remove();b.remove()};document.querySelector('.top-actions').prepend(b)}
+    if(!document.getElementById('logoutButton')){const b=document.createElement('button');b.id='logoutButton';b.className='btn small';b.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');b.onclick=async()=>{try{await apiPost({action:'logout'})}catch(_){}stopRealtimeSync();window.dispatchEvent(new Event('smartnote-logout'));authToken='';currentUser=null;isReady=false;localStorage.removeItem(SESSION_KEY);showLogin('You have been signed out.');document.getElementById('adminUsersButton')?.remove();b.remove()};document.querySelector('.top-actions').prepend(b)}
 
   }
   window.addEventListener('app-language-change',()=>{const button=document.getElementById('logoutButton');if(button)button.textContent=window.appTranslate?.('Sign out')||(document.documentElement.lang==='en'?'Sign out':'Sign out');const w=document.getElementById('welcomeUser');if(w&&currentUser)w.textContent=(document.documentElement.lang==='en'?'Welcome, ':'Welcome, ')+currentUser.username;if(currentView==='assigned')loadAssignedView();refreshUnifiedNotifications()});
