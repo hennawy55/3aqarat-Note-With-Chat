@@ -99,8 +99,9 @@ function connectRealtime(){
   if(!current())return;
   const tables=event.detail?.tables||[];
   if(tables.includes('chat_presence'))return;
-  await refreshRooms(true);
-  if(activeRoom&&active()){await loadMessages(true);await call('chat_mark_read',{roomId:activeRoom.id}).catch(()=>{})}
+  const roomId=activeRoom?.id,showingConversation=!!(roomId&&active());
+  const roomsUpdate=refreshRooms(true);
+  if(showingConversation){await Promise.all([roomsUpdate,loadMessages(true)]);await call('chat_mark_read',{roomId}).catch(()=>{})}else await roomsUpdate;
  });
 }
 function startTimers(){clearInterval(pollTimer);clearInterval(presenceTimer);pollTimer=setInterval(()=>{if(current()&&navigator.onLine&&!document.hidden)refreshRooms().then(()=>activeRoom&&active()&&loadMessages(true))},20000);presenceTimer=setInterval(()=>{if(current()&&navigator.onLine&&!document.hidden)refreshPresence()},25000)}
