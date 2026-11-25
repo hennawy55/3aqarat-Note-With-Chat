@@ -94,10 +94,8 @@ create trigger smartnote_chat_reactions_broadcast
 after insert or update or delete on public.chat_message_reactions
 for each row execute function public.broadcast_smartnote_chat_change();
 
+-- Presence is intentionally polled at a low frequency to avoid broadcast feedback loops.
 drop trigger if exists smartnote_chat_presence_broadcast on public.chat_presence;
-create trigger smartnote_chat_presence_broadcast
-after insert or update or delete on public.chat_presence
-for each row execute function public.broadcast_smartnote_chat_change();
 
 drop trigger if exists smartnote_chat_settings_broadcast on public.chat_user_settings;
 create trigger smartnote_chat_settings_broadcast
