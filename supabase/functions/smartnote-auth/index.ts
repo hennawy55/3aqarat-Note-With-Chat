@@ -200,7 +200,8 @@ async function chatAction(action:string,b:any,u:any){
   }));
   const privateIds=[...new Set(enriched.filter(r=>r.room_type==="private").flatMap(r=>String(r.name||"").split(":")))].filter(id=>id!==u.id);
   const people=privateIds.length?await needData<any[]>(db.from("profiles").select("id,username").in("id",privateIds),"chat_private_names_failed"):[];
-  return {ok:true,rooms:enriched.map(x=>({id:x.id,type:x.room_type,name:x.name,createdBy:x.created_by,createdAt:x.created_at,updatedAt:x.updated_at,memberRole:memberships.find(m=>m.room_id===x.id)?.member_role||"member",unreadCount:x.unreadCount,muted:x.muted,lastMessage:x.lastMessage,otherUsername:people.find(p=>String(x.name||"").split(":").includes(p.id))?.username||""})),unreadCount:enriched.reduce((n,x)=>n+x.unreadCount,0),muteAll:!!settings?.mute_all};
+  const onlineRows=privateIds.length?await needData<any[]>(db.from("chat_presence").select("user_id,last_seen_at").in("user_id",privateIds).gt("last_seen_at",new Date(Date.now()-90000).toISOString()),"chat_private_presence_failed"):[];
+  return {ok:true,rooms:enriched.map(x=>{const otherUserId=x.room_type==="private"?String(x.name||"").split(":").find(id=>id!==u.id)||"":"";return {id:x.id,type:x.room_type,name:x.name,createdBy:x.created_by,createdAt:x.created_at,updatedAt:x.updated_at,memberRole:memberships.find(m=>m.room_id===x.id)?.member_role||"member",unreadCount:x.unreadCount,muted:x.muted,lastMessage:x.lastMessage,otherUserId,otherOnline:onlineRows.some(p=>p.user_id===otherUserId),otherUsername:people.find(p=>p.id===otherUserId)?.username||""}}),unreadCount:enriched.reduce((n,x)=>n+x.unreadCount,0),muteAll:!!settings?.mute_all};
  }
  if(action==="chat_create_room"){
   const type=String(b.type||"");if(!["private","group"].includes(type))throw new Error("invalid_room_type");
@@ -230,9 +231,9 @@ async function chatAction(action:string,b:any,u:any){
    ids.length?needData<any[]>(db.from("chat_message_reactions").select("message_id,user_id,emoji").in("message_id",ids),"chat_reactions_lookup_failed"):Promise.resolve([]),
    replyIds.length?needData<any[]>(db.from("chat_messages").select("id,body,sender_id").in("id",replyIds),"chat_replies_lookup_failed"):Promise.resolve([])
   ]);
-  const replyPeople=[...new Set(replies.map(x=>x.sender_id))];
-  const replyNames=replyPeople.length?await needData<any[]>(db.from("profiles").select("id,username").in("id",replyPeople),"chat_reply_names_failed"):[];
-  return {ok:true,messages:rows.reverse().map(x=>({id:x.id,roomId:x.room_id,senderId:x.sender_id,senderName:people.find(p=>p.id===x.sender_id)?.username||"",body:x.body,createdAt:x.created_at,replyToId:x.reply_to_id||"",mentionAll:!!x.mention_all,reply:x.reply_to_id?(()=>{const q=replies.find(y=>y.id===x.reply_to_id);return q?{body:q.body,senderName:replyNames.find(p=>p.id===q.sender_id)?.username||""}:null})():null,receipts:receipts.filter(r=>r.message_id===x.id).map(r=>({userId:r.user_id,deliveredAt:r.delivered_at,readAt:r.read_at})),reactions:reactions.filter(r=>r.message_id===x.id).map(r=>({userId:r.user_id,emoji:r.emoji}))}))};
+  const replyPeople=[...new Set(replies.map(x=>x.sender_id))],reactionPeople=[...new Set(reactions.map(x=>x.user_id))];
+  const [replyNames,reactionNames]=await Promise.all([replyPeople.length?needData<any[]>(db.from("profiles").select("id,username").in("id",replyPeople),"chat_reply_names_failed"):Promise.resolve([]),reactionPeople.length?needData<any[]>(db.from("profiles").select("id,username").in("id",reactionPeople),"chat_reaction_names_failed"):Promise.resolve([])]);
+  return {ok:true,messages:rows.reverse().map(x=>({id:x.id,roomId:x.room_id,senderId:x.sender_id,senderName:people.find(p=>p.id===x.sender_id)?.username||"",body:x.body,createdAt:x.created_at,replyToId:x.reply_to_id||"",mentionAll:!!x.mention_all,reply:x.reply_to_id?(()=>{const q=replies.find(y=>y.id===x.reply_to_id);return q?{body:q.body,senderName:replyNames.find(p=>p.id===q.sender_id)?.username||""}:null})():null,receipts:receipts.filter(r=>r.message_id===x.id).map(r=>({userId:r.user_id,deliveredAt:r.delivered_at,readAt:r.read_at})),reactions:reactions.filter(r=>r.message_id===x.id).map(r=>({userId:r.user_id,username:reactionNames.find(p=>p.id===r.user_id)?.username||"",emoji:r.emoji}))}))};
  }
  if(action==="chat_send"){
   const body=String(b.body||"").trim();if(!body||body.length>5000)throw new Error("chat_invalid_message");
@@ -279,8 +280,9 @@ async function chatAction(action:string,b:any,u:any){
   await requireMember(roomId);const messageId=String(b.messageId||""),emoji=String(b.emoji||"");
   if(!["👍","❤️","😂","😮","😢","🙏"].includes(emoji))throw new Error("chat_invalid_reaction");
   const message=await needData<any>(db.from("chat_messages").select("id").eq("id",messageId).eq("room_id",roomId).maybeSingle(),"chat_message_lookup_failed");if(!message)throw new Error("chat_message_not_found");
-  const existing=await needData<any>(db.from("chat_message_reactions").select("id").eq("message_id",messageId).eq("user_id",u.id).eq("emoji",emoji).maybeSingle(),"chat_reaction_lookup_failed");
-  if(existing)await needData(db.from("chat_message_reactions").delete().eq("id",existing.id),"chat_reaction_delete_failed");
+  const existing=await needData<any>(db.from("chat_message_reactions").select("id,emoji").eq("message_id",messageId).eq("user_id",u.id).maybeSingle(),"chat_reaction_lookup_failed");
+  if(existing?.emoji===emoji)await needData(db.from("chat_message_reactions").delete().eq("id",existing.id),"chat_reaction_delete_failed");
+  else if(existing)await needData(db.from("chat_message_reactions").update({emoji,created_at:new Date().toISOString()}).eq("id",existing.id),"chat_reaction_update_failed");
   else await needData(db.from("chat_message_reactions").insert({message_id:messageId,user_id:u.id,emoji}),"chat_reaction_create_failed");
   return {ok:true};
  }
