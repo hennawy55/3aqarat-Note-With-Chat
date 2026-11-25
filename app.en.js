@@ -613,6 +613,7 @@
             if(document.querySelector('.assignment-popup'))toast(assignmentText('Follow-up updated by another user','Follow-up updated by another user'));
           }
           if(changed.includes('notifications'))await refreshUnifiedNotifications(false,true);else if(changed.some(table=>['assignments','reassignment_requests'].includes(table)))await refreshUnifiedNotifications();
+          const chatTables=changed.filter(table=>String(table).startsWith('chat_'));if(chatTables.length)window.dispatchEvent(new CustomEvent('smartnote-chat-refresh',{detail:{tables:chatTables}}));
           if(changed.includes('profiles')&&currentUser?.role==='admin'&&document.getElementById('adminPanel')?.style.display==='flex')await openAdminPanel();
         },220);
       }).subscribe(status=>{
