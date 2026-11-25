@@ -240,7 +240,7 @@ async function chatAction(action:string,b:any,u:any){
   const usernames=await needData<any[]>(db.from("profiles").select("id,username,preferred_language").in("id",members.map(m=>m.user_id)),"chat_mention_users_failed");
   const mentionAll=/(^|\s)@all\b/i.test(body),mentionedIds=new Set<string>();
   if(mentionAll)members.filter(m=>m.user_id!==u.id).forEach(m=>mentionedIds.add(m.user_id));
-  for(const person of usernames){if(person.id!==u.id&&new RegExp("(^|\\s)@"+String(person.username).replace(/[.*+?^${}()|[\\]\\\\]/g,"\\$&")+"(?=\\s|$|[.,!?])","i").test(body))mentionedIds.add(person.id);}
+  for(const person of usernames){if(person.id!==u.id&&body.toLocaleLowerCase().includes("@"+String(person.username).toLocaleLowerCase()))mentionedIds.add(person.id);}
   const row=await needData<any>(db.from("chat_messages").insert({room_id:roomId,sender_id:u.id,body,reply_to_id:replyToId,mention_all:mentionAll}).select("id,room_id,sender_id,body,created_at,reply_to_id,mention_all").single(),"chat_send_failed");
   const recipientIds=members.map(m=>m.user_id).filter(id=>id!==u.id);
   if(recipientIds.length)await needData(db.from("chat_message_receipts").insert(recipientIds.map(id=>({message_id:row.id,user_id:id}))),"chat_receipts_create_failed");
@@ -249,18 +249,13 @@ async function chatAction(action:string,b:any,u:any){
   const senderNames=usernames.find(p=>p.id===u.id);
   const roomTitle=room.room_type==="public"?"Public room":room.room_type==="group"?room.name:(usernames.find(p=>p.id!==u.id)?.username||"Private chat");
   const pushTargets=members.filter(m=>m.user_id!==u.id&&!m.notifications_muted);
-  for(const target of pushTargets){
-   const profile=usernames.find(p=>p.id===target.user_id);
-   if(profile?.preferred_language==="en"){
-    const excerpt=body.length>110?body.slice(0,107)+"...":body;
-    await sendPush(target.user_id,"","New message · "+roomTitle,senderNames?.username+": "+excerpt,{type:"chat_message",roomId,messageId:row.id});
-   }else{
-    const excerpt=body.length>110?body.slice(0,107)+"...":body;
-    await sendPush(target.user_id,"","رسالة جديدة · "+roomTitle,senderNames?.username+": "+excerpt,{type:"chat_message",roomId,messageId:row.id});
-   }
+  const userSettings=await needData<any>(db.from("chat_user_settings").select("mute_all").eq("user_id",u.id).maybeSingle(),"chat_settings_lookup_failed");
+  if(!userSettings?.mute_all)for(const target of pushTargets){
+   const profile=usernames.find(p=>p.id===target.user_id),isMentioned=mentionedIds.has(target.user_id),excerpt=body.length>110?body.slice(0,107)+"...":body;
+   const title=profile?.preferred_language==="en"?(isMentioned?"You were mentioned in a chat":"New message · "+roomTitle):(isMentioned?"تم ذكرك في محادثة":"رسالة جديدة · "+roomTitle);
+   const text=profile?.preferred_language==="en"?(isMentioned?senderNames?.username+" mentioned you in "+roomTitle:senderNames?.username+": "+excerpt):(isMentioned?senderNames?.username+" ذكرك في "+roomTitle:senderNames?.username+": "+excerpt);
+   try{await sendPush(target.user_id,"",title,text,{type:isMentioned?"chat_mention":"chat_message",roomId,messageId:row.id})}catch(pushError){console.warn("Chat push notification failed:",pushError)}
   }
-  const mentionTargets=pushTargets.filter(m=>mentionedIds.has(m.user_id));
-  for(const target of mentionTargets){const profile=usernames.find(p=>p.id===target.user_id);if(profile?.preferred_language==="en")await sendPush(target.user_id,"","You were mentioned in a chat",senderNames?.username+" mentioned you in "+roomTitle,{type:"chat_mention",roomId,messageId:row.id});else await sendPush(target.user_id,"","تم ذكرك في محادثة",senderNames?.username+" ذكرك في "+roomTitle,{type:"chat_mention",roomId,messageId:row.id});}
   return {ok:true,message:{id:row.id,roomId:row.room_id,senderId:row.sender_id,senderName:u.username,body:row.body,createdAt:row.created_at,replyToId:row.reply_to_id||"",mentionAll:!!row.mention_all}};
  }
  if(action==="chat_mark_read"){
