@@ -9,6 +9,7 @@ const migrationDb = read('supabase/migrations/202611240007_atomic_database_revis
 const migrationRealtime = read('supabase/migrations/202611240008_realtime_refresh_broadcast.sql');
 const styles = read('styles.css');
 const nativeNotifications = read('android-notifications.js');
+const nativeBack = read('android-back.js');
 const html = read('index.html');
 const worker = read('sw.js');
 const packageJson = JSON.parse(read('package.json'));
@@ -25,7 +26,7 @@ assert(edge.includes('p_expected_revision') && edge.includes('revision:Number(me
 assert(migrationAuth.includes('drop constraint if exists profiles_id_fkey'), 'Custom login identities must not require Supabase Auth users');
 assert(migrationDb.includes('user_database_meta') && migrationDb.includes("raise exception 'data_conflict'"), 'Database replacement must guard against cross-device stale writes');
 assert(html.includes('./lucide.min.js') && !html.includes('lucide@latest'), 'Lucide must be loaded from a local pinned asset');
-assert(worker.includes('smartnote-offline-shell-v40') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
+assert(worker.includes('smartnote-offline-shell-v41') && worker.includes('./index-ar.html') && worker.includes('./app.ar.js') && worker.includes('./language.js') && worker.includes('./chat.js'), 'Service worker must refresh and cache both language pages and switcher');
 assert(packageJson.dependencies.lucide === '0.468.0', 'Lucide version must remain pinned');
 assert(packageJson.scripts['prepare:android'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Android build must bundle the local Lucide runtime');
 assert(packageJson.scripts['prepare:web'].includes('node_modules/lucide/dist/umd/lucide.min.js'), 'Web build must bundle the local Lucide runtime');
@@ -51,7 +52,9 @@ assert(chat.includes("document.querySelectorAll('#sideNav") && chat.includes('ch
 assert(chat.includes('data-react-users') && edge.includes('chat_reaction_update_failed'), 'Reaction chips must expose reacting users and update a single reaction per user');
 assert(edge.includes('otherUserId') && chat.includes('chat-title-presence'), 'Private chat presence must appear in the list and conversation header');
 assert(chat.includes('chatInboxButton') && chat.includes('chatInboxPanel') && chat.includes('chat_mark_all_read'), 'Chat icon must open a de-duplicated conversation inbox with mark-all-read');
+assert(nativeBack.includes('window.smartNoteChatBack') && nativeBack.includes('return;'), 'Android system Back must prioritize returning from an open chat to its room list');
 assert(chat.includes('chatHeaderNew') && chat.includes("quickAdd.hidden=isChat") && !chat.includes('id="chatNew"') && chat.includes('chat-sidebar-title-row') && chat.includes('id="chatMuteAll"'), 'New chat must move to the shared page header and mute-all control must sit beside the conversations title');
+assert(styles.includes('justify-content:space-between') && styles.includes('.chat-sidebar-title-row #chatMuteAll svg') && styles.includes('width:20px;height:20px'), 'Chat heading must separate title and mute control and keep the bell icon proportional');
 assert(chat.includes('roomSelectionVersion++') && chat.includes('selection!==roomSelectionVersion') && chat.includes("$('chatBack').addEventListener('click'"), 'Back navigation must cancel pending room selection work and return immediately to the room list');
 assert(chat.includes('data-reply') && chat.includes('chat_react') && chat.includes('@all') && chat.includes('data-mention'), 'Chat must support replies, reactions and user/all mentions');
 assert(chat.includes('chat_presence') && chat.includes('chat_mute_all') && chat.includes('chat_mute'), 'Chat must expose active users and global/per-room mute controls');
