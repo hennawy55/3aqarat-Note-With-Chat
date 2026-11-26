@@ -684,3 +684,12 @@ html.native-chat-room-open .chat-mention-menu{position:fixed;bottom:calc(66px + 
 .chat-sidebar-title-row #chatMuteAll{width:34px;height:34px;flex:none}
 .chat-sidebar-head{align-items:flex-start}
 .chat-sidebar-tools{display:none!important}
+
+
+/* Chat sidebar heading: keep title and notification control at opposite edges. */
+.chat-sidebar-title{width:100%;min-width:0}
+.chat-sidebar-title-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chat-sidebar-title-row h2{margin:0;flex:0 1 auto}
+.chat-sidebar-title-row #chatMuteAll{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;flex:0 0 36px;display:grid;place-items:center}
+.chat-sidebar-title-row #chatMuteAll svg,
+.chat-sidebar-title-row #chatMuteAll i{width:20px;height:20px;font-size:20px;display:block}
