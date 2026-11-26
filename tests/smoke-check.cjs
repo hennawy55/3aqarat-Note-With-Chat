@@ -65,7 +65,7 @@ assert(edge.includes('chat_message_receipts') && edge.includes('chat_mark_all_re
 assert(edge.includes('type:isMentioned?"chat_mention":"chat_message"') && edge.includes('extraData:Record<string,string>'), 'Chat messages must send typed push notifications');
 assert(chatFeatures.includes('broadcast_smartnote_chat_change') && chatFeatures.includes('chat_message_receipts') && chatFeatures.includes('chat_user_settings'), 'Chat feature migration must provision receipts, mute settings and realtime broadcasts');
 assert(chatSingleReaction.includes('chat_message_reactions_one_per_user_idx') && chatSingleReaction.includes('partition by message_id, user_id'), 'A user must have at most one reaction per message');
-assert(worker.includes('smartnote-offline-shell-v40') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
+assert(worker.includes('smartnote-offline-shell-v41') && worker.includes('OPEN_CHAT_NOTIFICATION'), 'Service worker must cache updated chat and route incoming chat notifications');
 assert(nativeNotifications.includes('smartnote-open-chat') && nativeNotifications.includes('roomId'), 'Android push notification taps must open the target conversation');
 assert(nativeNotifications.includes('pushNotificationReceived') && nativeNotifications.includes('showInstantNotification') && nativeNotifications.includes('foreground chat notification'), 'Android must display incoming chat notifications while the app is open');
 assert(app.includes('smartnote-chat-refresh'), 'App shell must forward private session realtime events to the chat view');
