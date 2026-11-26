@@ -1,8 +1,11 @@
 import { App } from '@capacitor/app';
 
 App.addListener('backButton', () => {
-  // Give the open chat first priority so Android's system Back returns
-  // to the conversation list instead of navigating away from the page.
-  if (typeof window.smartNoteChatBack === 'function' && window.smartNoteChatBack()) return;
+  // A native chat screen owns the first Back press and returns to its room list.
+  try {
+    if (typeof window.smartNoteChatBack === 'function' && window.smartNoteChatBack()) return;
+  } catch (error) {
+    console.warn('Could not close the active chat screen:', error);
+  }
   window.dispatchEvent(new CustomEvent('smartnote-back-button'));
 });
