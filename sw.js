@@ -1,4 +1,4 @@
-const CACHE = 'smartnote-offline-shell-v41';
+const CACHE = 'smartnote-offline-shell-v42';
 const ASSETS = [
   './index.html',
   './index-en.html',
